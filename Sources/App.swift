@@ -71,9 +71,8 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let l = ultimos[s]?.estado.libreMinimo { return (s, porcentaje(l).replacingOccurrences(of: " ", with: "")) }
             return (s, "–")
         }
-        // Plantilla siempre; al forzar Día o Noche se tiñe (la barra de macOS 26 ignora imágenes a color).
+        // Plantilla: la barra sigue siempre al sistema, como las demás apps; el modo forzado sólo cambia menú y ventanas.
         item.button?.image = imagenBarra(items)
-        item.button?.contentTintColor = Ajustes.apariencia == "noche" ? .white : Ajustes.apariencia == "dia" ? .black : nil
         item.button?.toolTip = "JenBar: porcentaje disponible"
     }
 
