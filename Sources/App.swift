@@ -113,7 +113,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func vista<V: View>(_ v: V) -> NSMenuItem {
         let h = NSHostingView(rootView: v)
-        h.appearance = NSApp.appearance
+        // Sin apariencia propia: hereda la del menú real, así texto y fondo coinciden siempre.
         h.frame.size = h.fittingSize
         let m = NSMenuItem()
         m.view = h

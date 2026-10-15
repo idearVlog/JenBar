@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/icono.png" width="128" alt="JenBar"></p>
+
 # JenBar
 
 **JenBar · cuánto te queda en Claude y ChatGPT, en tu barra de menú.**
