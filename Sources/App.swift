@@ -65,7 +65,8 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if case .success(let e) = resultados[s], let l = e.libreMinimo { return (s, porcentaje(l).replacingOccurrences(of: " ", with: "")) }
             return (s, "–")
         }
-        item.button?.image = imagenBarra(items)
+        item.button?.image = imagenBarra(items, color: Ajustes.apariencia == "noche" ? .white
+                                                       : Ajustes.apariencia == "dia" ? .black : nil)
         item.button?.toolTip = "Restante: porcentaje disponible"
     }
 
@@ -75,12 +76,15 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "noche": NSApp.appearance = NSAppearance(named: .darkAqua)
         default: NSApp.appearance = nil
         }
+        // El menú de la barra no hereda NSApp.appearance: se fuerza aparte.
+        item.menu?.appearance = NSApp.appearance
     }
 
     // MARK: Menú
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         if Date().timeIntervalSince(ultima) > 60 { actualizar() }
+        menu.appearance = NSApp.appearance
         menu.removeAllItems()
         for s in activos {
             menu.addItem(vista(TarjetaServicio(servicio: s, resultado: resultados[s])))
@@ -103,6 +107,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func vista<V: View>(_ v: V) -> NSMenuItem {
         let h = NSHostingView(rootView: v)
+        h.appearance = NSApp.appearance
         h.frame.size = h.fittingSize
         let m = NSMenuItem()
         m.view = h

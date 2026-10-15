@@ -27,9 +27,11 @@ func cuando(_ d: Date?) -> String {
 
 // MARK: Título de la barra (plantilla monocroma: macOS la pinta blanca o negra según el esquema)
 
-func imagenBarra(_ items: [(Servicio, String)]) -> NSImage {
+// color nil = plantilla (sigue al sistema); un color fijo se usa al forzar Día o Noche.
+func imagenBarra(_ items: [(Servicio, String)], color: NSColor? = nil) -> NSImage {
+    let tinta = color ?? .black
     let font = NSFont.monospacedDigitSystemFont(ofSize: 12.5, weight: .semibold)
-    let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+    let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: tinta]
     let ico: CGFloat = 14, gap: CGFloat = 4, sep: CGFloat = 10, h: CGFloat = 18
     let textos = items.map { NSAttributedString(string: $0.1, attributes: attrs) }
     let w = zip(items, textos).reduce(CGFloat(0)) { $0 + ico + gap + ceil($1.1.size().width) }
@@ -37,14 +39,16 @@ func imagenBarra(_ items: [(Servicio, String)]) -> NSImage {
     let img = NSImage(size: NSSize(width: max(w, 1), height: h), flipped: false) { _ in
         var x: CGFloat = 0
         for ((s, _), t) in zip(items, textos) {
-            glifo(s.glifo).draw(in: NSRect(x: x, y: (h - ico) / 2, width: ico, height: ico))
+            let r = NSRect(x: x, y: (h - ico) / 2, width: ico, height: ico)
+            glifo(s.glifo).draw(in: r)
+            tinta.set(); r.fill(using: .sourceAtop)
             x += ico + gap
             t.draw(at: NSPoint(x: x, y: (h - t.size().height) / 2))
             x += ceil(t.size().width) + sep
         }
         return true
     }
-    img.isTemplate = true
+    img.isTemplate = color == nil
     return img
 }
 
