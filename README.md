@@ -1,4 +1,6 @@
-# Restante
+# JenBar
+
+**JenBar · cuánto te queda en Claude y ChatGPT, en tu barra de menú.**
 
 Medidor mínimo para la barra de menú de macOS: muestra cuánto te queda en **Claude** (ventana de 5 horas y semanal) y en **ChatGPT / Codex**, con el logo de cada servicio.
 
@@ -17,7 +19,7 @@ Los endpoints de uso no están documentados públicamente y pueden cambiar.
 ## Compilar
 Requiere macOS 14 o posterior y las Command Line Tools.
 ```
-./build.sh   # genera build/Restante.app
+./build.sh   # genera build/JenBar.app
 ```
 
 ## Créditos
@@ -25,4 +27,4 @@ Hecho por Fabián Fernández. Software libre bajo **GPL-3.0**.
 Gentileza de [idearVlog](https://www.youtube.com/@IdearVlog) y [Los Viajes del Tío Fabián](https://www.youtube.com/@losviajesdeltiofabian).
 ¿Querés apoyarme? Sólo suscribite a mis canales.
 
-Los logos (Simple Icons, CC0) son marcas de sus respectivos dueños. Restante no está afiliado a Anthropic ni a OpenAI.
+Los logos (Simple Icons, CC0) son marcas de sus respectivos dueños. JenBar no está afiliado a Anthropic ni a OpenAI.

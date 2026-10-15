@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 
-let repoGitHub = "idearvlog/Restante"
+let repoGitHub = "idearvlog/JenBar"
 let canales = [("idearVlog", "https://www.youtube.com/@IdearVlog"),
                ("Los Viajes del Tío Fabián", "https://www.youtube.com/@losviajesdeltiofabian")]
 
@@ -14,7 +14,7 @@ enum Arranque {
 }
 
 enum Vinculo {
-    // Abre Terminal con el inicio de sesión oficial de cada CLI; Restante nunca escribe credenciales.
+    // Abre Terminal con el inicio de sesión oficial de cada CLI; JenBar nunca escribe credenciales.
     static func abrir(_ s: Servicio) {
         let cmd: String
         switch s {
@@ -74,7 +74,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Plantilla siempre; al forzar Día o Noche se tiñe (la barra de macOS 26 ignora imágenes a color).
         item.button?.image = imagenBarra(items)
         item.button?.contentTintColor = Ajustes.apariencia == "noche" ? .white : Ajustes.apariencia == "dia" ? .black : nil
-        item.button?.toolTip = "Restante: porcentaje disponible"
+        item.button?.toolTip = "JenBar: porcentaje disponible"
     }
 
     func aplicarApariencia() {
@@ -136,7 +136,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let w = NSWindow(contentViewController: NSHostingController(rootView: VistaConfig {
                 self.aplicarApariencia(); self.pintarBarra(); self.actualizar()
             }))
-            w.title = "Restante · Configuración"
+            w.title = "JenBar · Configuración"
             w.isReleasedWhenClosed = false
             w.styleMask = [.titled, .closable]
             w.setContentSize(NSSize(width: 420, height: 400))
@@ -166,7 +166,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     alerta.addButton(withTitle: "Descargar"); alerta.addButton(withTitle: "Más tarde")
                     url = (j["html_url"] as? String).flatMap(URL.init(string:))
                 } else {
-                    alerta.messageText = "Restante está al día (\(actual))"
+                    alerta.messageText = "JenBar está al día (\(actual))"
                 }
             } catch {
                 alerta.messageText = "No se pudo comprobar la versión"

@@ -1,4 +1,4 @@
-// Restante — lectura de uso de Claude y ChatGPT/Codex. Sólo lee credenciales; nunca las escribe.
+// JenBar — lectura de uso de Claude y ChatGPT/Codex. Sólo lee credenciales; nunca las escribe.
 import Foundation
 
 struct Ventana {
@@ -104,7 +104,7 @@ enum Lector {
 
     private static func pedir(_ url: String, _ headers: [String: String]) async throws -> [String: Any] {
         var r = URLRequest(url: URL(string: url)!, timeoutInterval: 15)
-        r.setValue("Restante", forHTTPHeaderField: "User-Agent")
+        r.setValue("JenBar", forHTTPHeaderField: "User-Agent")
         headers.forEach { r.setValue($1, forHTTPHeaderField: $0) }
         let (data, resp) = try await URLSession.shared.data(for: r)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
