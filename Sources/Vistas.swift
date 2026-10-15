@@ -116,13 +116,13 @@ struct TarjetaServicio: View {
 
 struct Creditos: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 7) {
             Text("Creado por Fabián Fernández · Software libre · GPL v3").font(.system(size: 10.5, weight: .medium)).lineLimit(1).minimumScaleFactor(0.8)
             Text("Gentileza de idearVlog y Los Viajes del Tío Fabián").font(.system(size: 10.5))
             Text("¿Querés apoyarme? Sólo suscribite a mis canales.").font(.system(size: 10.5))
         }
         .foregroundStyle(.primary.opacity(0.8))
-        .padding(.horizontal, 14).padding(.vertical, 6)
+        .padding(.horizontal, 14).padding(.vertical, 10)
         .frame(width: 300, alignment: .leading)
     }
 }

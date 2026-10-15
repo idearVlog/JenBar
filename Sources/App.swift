@@ -44,6 +44,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.menu = menu
         pintarBarra()
         actualizar()
+        if CommandLine.arguments.contains("--config") { abrirConfig() }
         Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in Task { @MainActor in self.actualizar() } }
     }
 
@@ -125,11 +126,15 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }))
             w.title = "Restante · Configuración"
             w.isReleasedWhenClosed = false
+            w.styleMask = [.titled, .closable]
+            w.setContentSize(NSSize(width: 420, height: 400))
             ventanaConfig = w
         }
-        NSApp.activate(ignoringOtherApps: true)
+        // macOS 14+: activate(ignoringOtherApps:) ya no trae al frente una app de barra de menú.
+        NSApp.activate()
         ventanaConfig?.center()
         ventanaConfig?.makeKeyAndOrderFront(nil)
+        ventanaConfig?.orderFrontRegardless()
     }
 
     @objc func buscarVersion() {
@@ -155,7 +160,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 alerta.messageText = "No se pudo comprobar la versión"
                 alerta.informativeText = "github.com/\(repoGitHub)"
             }
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
             if alerta.runModal() == .alertFirstButtonReturn, let url { NSWorkspace.shared.open(url) }
         }
     }
