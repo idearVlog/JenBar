@@ -9,6 +9,13 @@ Medidor mínimo para la barra de menú de macOS: muestra cuánto te queda en **C
 - En Configuración elegís el modo (Sistema / Día / Noche), activás o vinculás cada servicio y decidís si se abre al iniciar sesión.
 - Desde el menú podés buscar actualizaciones de la app.
 
+## Instalar
+1. Descargá `JenBar-x.y.z.dmg` desde [Releases](../../releases).
+2. Abrilo y arrastrá **JenBar** a **Aplicaciones**.
+3. La primera vez, hacé clic derecho sobre JenBar → **Abrir**. La app no está notarizada por Apple, así que macOS pide confirmarlo una sola vez.
+
+Funciona en macOS 14 o posterior, en Mac con Apple Silicon o Intel.
+
 ## Cómo lee los datos
 Sólo lee credenciales; nunca las escribe ni las envía a terceros.
 - **Claude**: lee el token OAuth de Claude Code guardado en el llavero (`Claude Code-credentials`). Para vincularlo, corré `claude /login`.
@@ -19,7 +26,7 @@ Los endpoints de uso no están documentados públicamente y pueden cambiar.
 ## Compilar
 Requiere macOS 14 o posterior y las Command Line Tools.
 ```
-./build.sh   # genera build/JenBar.app
+./build.sh   # genera build/JenBar.app y build/JenBar-<versión>.dmg
 ```
 
 ## Créditos

@@ -5,7 +5,12 @@ cd "$(dirname "$0")"
 VERSION=1.0.0
 APP=build/JenBar.app
 rm -rf build && mkdir -p $APP/Contents/MacOS $APP/Contents/Resources
-swiftc -O -parse-as-library -target arm64-apple-macos14 Sources/*.swift -o $APP/Contents/MacOS/JenBar
+# Binario universal: Apple Silicon e Intel.
+for arch in arm64 x86_64; do
+  swiftc -O -parse-as-library -target $arch-apple-macos14 Sources/*.swift -o build/JenBar-$arch
+done
+lipo -create build/JenBar-arm64 build/JenBar-x86_64 -output $APP/Contents/MacOS/JenBar
+rm build/JenBar-arm64 build/JenBar-x86_64
 cp Resources/*.svg $APP/Contents/Resources/
 cat > $APP/Contents/Info.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -25,4 +30,8 @@ cat > $APP/Contents/Info.plist <<EOF
 EOF
 xattr -cr $APP
 codesign --force --sign - $APP
-echo "Listo: $APP"
+# Instalador DMG: la app y un acceso a Aplicaciones para arrastrar.
+STAGE=build/dmg && mkdir -p $STAGE && cp -R $APP $STAGE/ && ln -s /Applications $STAGE/Aplicaciones
+hdiutil create -quiet -volname "JenBar $VERSION" -srcfolder $STAGE -fs HFS+ -format UDZO -ov build/JenBar-$VERSION.dmg
+rm -rf $STAGE
+echo "Listo: $APP y build/JenBar-$VERSION.dmg"
