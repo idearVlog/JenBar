@@ -117,8 +117,7 @@ struct TarjetaServicio: View {
 struct Creditos: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("Hecho por Fabián Fernández").font(.system(size: 10.5, weight: .medium))
-            Text("Software libre · GPL v3").font(.system(size: 10.5))
+            Text("Creado por Fabián Fernández · Software libre · GPL v3").font(.system(size: 10.5, weight: .medium)).lineLimit(1).minimumScaleFactor(0.8)
             Text("Gentileza de idearVlog y Los Viajes del Tío Fabián").font(.system(size: 10.5))
             Text("¿Querés apoyarme? Sólo suscribite a mis canales.").font(.system(size: 10.5))
         }
