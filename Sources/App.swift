@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 
-let repoGitHub = "idearvlog/JenBar"
+let repoGitHub = "idearVlog/JenBar"
 let canales = [("idearVlog", "https://www.youtube.com/@IdearVlog"),
                ("Los Viajes del Tío Fabián", "https://www.youtube.com/@losviajesdeltiofabian")]
 
