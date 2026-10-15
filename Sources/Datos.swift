@@ -29,6 +29,7 @@ enum FalloLectura: LocalizedError {
         switch self {
         case .sinVincular: return "No vinculado"
         case .sesionVencida: return "Sesión vencida: volvé a vincular"
+        case .respuesta(429): return "Demasiadas consultas: reintento en 15 min"
         case .respuesta(let c): return "El servicio respondió \(c)"
         }
     }

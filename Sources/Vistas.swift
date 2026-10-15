@@ -91,25 +91,31 @@ struct FilaVentana: View {
 
 struct TarjetaServicio: View {
     let servicio: Servicio
-    let resultado: Result<Estado, Error>?
+    let ultimo: (estado: Estado, cuando: Date)?
+    let error: Error?
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(nsImage: glifo(servicio.glifo)).resizable().frame(width: 15, height: 15)
                 Text(servicio.nombre).font(.system(size: 13, weight: .semibold))
-                if case .success(let e) = resultado, !e.plan.isEmpty {
+                if let e = ultimo?.estado, !e.plan.isEmpty {
                     Text(e.plan.uppercased()).font(.system(size: 9, weight: .bold)).tracking(0.6)
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .overlay(Capsule().stroke(.primary.opacity(0.35)))
                 }
                 Spacer()
             }
-            switch resultado {
-            case .none: Text("Leyendo…").font(.system(size: 11))
-            case .failure(let e): Text(e.localizedDescription).font(.system(size: 11))
-            case .success(let e):
-                if let v = e.cincoHoras { FilaVentana(titulo: "Ventana de 5 horas", v: v) }
-                if let v = e.semana { FilaVentana(titulo: "Semanal", v: v) }
+            if let u = ultimo {
+                if let v = u.estado.cincoHoras { FilaVentana(titulo: "Ventana de 5 horas", v: v) }
+                if let v = u.estado.semana { FilaVentana(titulo: "Semanal", v: v) }
+                if error != nil {
+                    Text("Dato de hace \(max(1, Int(-u.cuando.timeIntervalSinceNow / 60))) min; el servicio no respondió ahora.")
+                        .font(.system(size: 10)).foregroundStyle(.primary.opacity(0.6))
+                }
+            } else if let error {
+                Text(error.localizedDescription).font(.system(size: 11))
+            } else {
+                Text("Leyendo…").font(.system(size: 11))
             }
         }
         .foregroundStyle(.primary)

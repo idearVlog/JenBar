@@ -33,8 +33,9 @@ enum Vinculo {
 @MainActor
 final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    var resultados: [Servicio: Result<Estado, Error>] = [:]
-    var ultima = Date.distantPast
+    var ultimos: [Servicio: (estado: Estado, cuando: Date)] = [:]   // último dato bueno: se conserva si falla una lectura
+    var errores: [Servicio: Error] = [:]
+    var proximo: [Servicio: Date] = [:]                            // pausa entre lecturas (evita el 429 del servicio)
     var ventanaConfig: NSWindow?
 
     func applicationDidFinishLaunching(_ n: Notification) {
@@ -51,10 +52,15 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var activos: [Servicio] { Servicio.allCases.filter(Ajustes.activo) }
 
     func actualizar() {
-        ultima = Date()
-        for s in activos {
+        for s in activos where Date() >= proximo[s, default: .distantPast] {
+            proximo[s] = Date().addingTimeInterval(240)
             Task {
-                do { resultados[s] = .success(try await Lector.leer(s)) } catch { resultados[s] = .failure(error) }
+                do {
+                    ultimos[s] = (try await Lector.leer(s), Date()); errores[s] = nil
+                } catch {
+                    errores[s] = error
+                    if case FalloLectura.respuesta(429) = error { proximo[s] = Date().addingTimeInterval(900) }
+                }
                 pintarBarra()
             }
         }
@@ -62,11 +68,12 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func pintarBarra() {
         let items = activos.map { s -> (Servicio, String) in
-            if case .success(let e) = resultados[s], let l = e.libreMinimo { return (s, porcentaje(l).replacingOccurrences(of: " ", with: "")) }
+            if let l = ultimos[s]?.estado.libreMinimo { return (s, porcentaje(l).replacingOccurrences(of: " ", with: "")) }
             return (s, "–")
         }
-        item.button?.image = imagenBarra(items, color: Ajustes.apariencia == "noche" ? .white
-                                                       : Ajustes.apariencia == "dia" ? .black : nil)
+        // Plantilla siempre; al forzar Día o Noche se tiñe (la barra de macOS 26 ignora imágenes a color).
+        item.button?.image = imagenBarra(items)
+        item.button?.contentTintColor = Ajustes.apariencia == "noche" ? .white : Ajustes.apariencia == "dia" ? .black : nil
         item.button?.toolTip = "Restante: porcentaje disponible"
     }
 
@@ -83,11 +90,11 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: Menú
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        if Date().timeIntervalSince(ultima) > 60 { actualizar() }
+        actualizar()
         menu.appearance = NSApp.appearance
         menu.removeAllItems()
         for s in activos {
-            menu.addItem(vista(TarjetaServicio(servicio: s, resultado: resultados[s])))
+            menu.addItem(vista(TarjetaServicio(servicio: s, ultimo: ultimos[s], error: errores[s])))
             menu.addItem(.separator())
         }
         if activos.isEmpty { menu.addItem(withTitle: "Activá un servicio en Configuración", action: nil, keyEquivalent: "") }
