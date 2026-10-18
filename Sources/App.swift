@@ -95,7 +95,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.appearance = NSApp.appearance
         menu.removeAllItems()
         if let n = novedad {
-            let m = accion("Nueva versión: JenBar \(n.version) · Descargar", "arrow.down.circle.fill", #selector(abrirNovedad), "")
+            let m = accion("Nueva versión: JenBar \(n.version) · Instalar y reiniciar", "arrow.down.circle.fill", #selector(abrirNovedad), "")
             m.attributedTitle = NSAttributedString(string: m.title, attributes: [.font: NSFont.menuFont(ofSize: 13).withTraits(.bold)])
             menu.addItem(m)
             menu.addItem(.separator())
@@ -158,17 +158,20 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: Actualizaciones
 
-    var novedad: (version: String, url: URL)?
+    var novedad: (version: String, url: URL, dmg: URL?)?
     var actual: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0" }
 
-    func consultarVersion() async throws -> (version: String, url: URL)? {
+    func consultarVersion() async throws -> (version: String, url: URL, dmg: URL?)? {
         let (d, r) = try await URLSession.shared.data(from: URL(string: "https://api.github.com/repos/\(repoGitHub)/releases/latest")!)
         guard (r as? HTTPURLResponse)?.statusCode == 200,
               let j = try JSONSerialization.jsonObject(with: d) as? [String: Any],
               let tag = j["tag_name"] as? String,
               let url = (j["html_url"] as? String).flatMap(URL.init(string:)) else { throw URLError(.badServerResponse) }
         let v = tag.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-        return v.compare(actual, options: .numeric) == .orderedDescending ? (v, url) : nil
+        let dmg = (j["assets"] as? [[String: Any]])?
+            .compactMap { $0["browser_download_url"] as? String }.first { $0.hasSuffix(".dmg") }
+            .flatMap(URL.init(string:))
+        return v.compare(actual, options: .numeric) == .orderedDescending ? (v, url, dmg) : nil
     }
 
     // Revisión silenciosa al abrir y cada 6 h: avisa una sola vez por versión.
@@ -182,14 +185,45 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             UserDefaults.standard.set(true, forKey: clave)
             let a = NSAlert()
             a.messageText = "JenBar \(n.version) está disponible"
-            a.informativeText = "Tenés la \(actual). Podés descargarla ahora o más tarde desde el menú."
-            a.addButton(withTitle: "Descargar"); a.addButton(withTitle: "Más tarde")
+            a.informativeText = "Tenés la \(actual). Se instala sola y JenBar se vuelve a abrir."
+            a.addButton(withTitle: "Instalar y reiniciar"); a.addButton(withTitle: "Más tarde")
             NSApp.activate()
-            if a.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(n.url) }
+            if a.runModal() == .alertFirstButtonReturn { instalar(n) }
         }
     }
 
-    @objc func abrirNovedad() { if let u = novedad?.url { NSWorkspace.shared.open(u) } }
+    @objc func abrirNovedad() { if let n = novedad { instalar(n) } }
+
+    // Descarga el DMG de la release, reemplaza la app y la vuelve a abrir.
+    // Si algo falla, abre la página de la release para descargarla a mano.
+    func instalar(_ n: (version: String, url: URL, dmg: URL?)) {
+        guard let dmg = n.dmg else { NSWorkspace.shared.open(n.url); return }
+        item.button?.toolTip = "Descargando JenBar \(n.version)…"
+        Task {
+            do {
+                let (tmp, r) = try await URLSession.shared.download(from: dmg)
+                guard (r as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+                let destino = Bundle.main.bundlePath
+                let script = """
+                set -e
+                MNT=$(hdiutil attach -nobrowse -noverify -noautoopen "\(tmp.path)" | awk -F'\\t' '/Volumes/{print $NF}')
+                while kill -0 \(ProcessInfo.processInfo.processIdentifier) 2>/dev/null; do sleep 0.2; done
+                rm -rf "\(destino)"
+                ditto "$MNT/JenBar.app" "\(destino)"
+                hdiutil detach -quiet "$MNT"
+                rm -f "\(tmp.path)"
+                open "\(destino)"
+                """
+                let p = Process()
+                p.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                p.arguments = ["-c", script]
+                try p.run()
+                NSApp.terminate(nil)
+            } catch {
+                NSWorkspace.shared.open(n.url)
+            }
+        }
+    }
 
     @objc func buscarVersion() {
         Task {
@@ -199,8 +233,8 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 if let n = try await consultarVersion() {
                     novedad = n; pintarBarra()
                     alerta.messageText = "Hay una versión nueva: \(n.version)"
-                    alerta.informativeText = "Tenés la \(actual). ¿Abrir la página de descarga?"
-                    alerta.addButton(withTitle: "Descargar"); alerta.addButton(withTitle: "Más tarde")
+                    alerta.informativeText = "Tenés la \(actual). Se instala sola y JenBar se vuelve a abrir."
+                    alerta.addButton(withTitle: "Instalar y reiniciar"); alerta.addButton(withTitle: "Más tarde")
                     url = n.url
                 } else {
                     alerta.messageText = "JenBar está al día (\(actual))"
@@ -210,7 +244,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 alerta.informativeText = "github.com/\(repoGitHub)"
             }
             NSApp.activate()
-            if alerta.runModal() == .alertFirstButtonReturn, let url { NSWorkspace.shared.open(url) }
+            if alerta.runModal() == .alertFirstButtonReturn, url != nil, let n = novedad { instalar(n) }
         }
     }
 }
