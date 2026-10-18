@@ -180,6 +180,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard let n = try? await consultarVersion() else { return }
             novedad = n
             pintarBarra()
+            if CommandLine.arguments.contains("--instalar-novedad") { instalar(n); return }   // para pruebas
             let clave = "avisada." + n.version
             guard !UserDefaults.standard.bool(forKey: clave) else { return }
             UserDefaults.standard.set(true, forKey: clave)
