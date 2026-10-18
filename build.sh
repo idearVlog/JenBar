@@ -2,7 +2,7 @@
 # Compila JenBar.app (sin Xcode, sólo con las Command Line Tools).
 set -e
 cd "$(dirname "$0")"
-VERSION=1.0.0
+VERSION=1.0.1
 APP=build/JenBar.app
 rm -rf build && mkdir -p $APP/Contents/MacOS $APP/Contents/Resources
 # Binario universal: Apple Silicon e Intel.

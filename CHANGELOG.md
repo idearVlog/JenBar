@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.0.1 — 2026-10-18
+- Claude: cuando vence la sesión de Claude Code (unas 8 h), JenBar la renueva sola a través de Claude Code. Antes quedaba fija en «demasiadas consultas».
+- El plan se lee de nuevo en cada consulta (por ejemplo, muestra Max después de mejorar el plan y volver a iniciar sesión).
+
 ## 1.0.0 — 2026-10-15
 Primera versión pública.
 - Barra de menú: logos de Claude y ChatGPT con el % disponible, siguiendo el esquema del sistema.
