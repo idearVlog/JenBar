@@ -1,7 +1,7 @@
 # Cambios
 
 ## 1.1.0 — 2026-10-18
-- Aviso automático de actualizaciones: JenBar revisa GitHub al abrirse y cada 6 h. Cuando hay una versión nueva, avisa una vez con un cartel, muestra un punto en la barra y agrega «Actualización disponible» arriba del menú.
+- Aviso automático de actualizaciones: JenBar revisa GitHub al abrirse y cada 6 h. Cuando hay una versión nueva, avisa una vez con un cartel; hasta que actualices, la barra muestra una flecha de descarga y el menú arranca con «Nueva versión · Descargar».
 
 ## 1.0.1 — 2026-10-18
 - Claude: cuando vence la sesión de Claude Code (unas 8 h), JenBar la renueva sola a través de Claude Code. Antes quedaba fija en «demasiadas consultas».

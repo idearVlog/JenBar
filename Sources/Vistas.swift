@@ -35,7 +35,7 @@ func imagenBarra(_ items: [(Servicio, String)], color: NSColor? = nil, aviso: Bo
     let ico: CGFloat = 14, gap: CGFloat = 4, sep: CGFloat = 10, h: CGFloat = 18
     let textos = items.map { NSAttributedString(string: $0.1, attributes: attrs) }
     let w = zip(items, textos).reduce(CGFloat(0)) { $0 + ico + gap + ceil($1.1.size().width) }
-        + sep * CGFloat(max(items.count - 1, 0)) + (aviso ? 8 : 0)
+        + sep * CGFloat(max(items.count - 1, 0)) + (aviso ? 16 : 0)
     let img = NSImage(size: NSSize(width: max(w, 1), height: h), flipped: false) { _ in
         var x: CGFloat = 0
         for ((s, _), t) in zip(items, textos) {
@@ -47,7 +47,10 @@ func imagenBarra(_ items: [(Servicio, String)], color: NSColor? = nil, aviso: Bo
             x += ceil(t.size().width) + sep
         }
         // Punto de aviso: hay una actualización disponible.
-        if aviso { tinta.setFill(); NSBezierPath(ovalIn: NSRect(x: x - sep + 3, y: h - 7, width: 5, height: 5)).fill() }
+        if aviso, let f = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: "Nueva versión")?
+            .withSymbolConfiguration(.init(pointSize: 12, weight: .semibold)) {
+            f.draw(in: NSRect(x: x - sep + 4, y: (h - 13) / 2, width: 13, height: 13))
+        }
         return true
     }
     img.isTemplate = color == nil

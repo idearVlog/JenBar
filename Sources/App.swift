@@ -95,7 +95,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.appearance = NSApp.appearance
         menu.removeAllItems()
         if let n = novedad {
-            let m = accion("Actualización disponible: JenBar \(n.version)", "arrow.down.circle.fill", #selector(abrirNovedad), "")
+            let m = accion("Nueva versión: JenBar \(n.version) · Descargar", "arrow.down.circle.fill", #selector(abrirNovedad), "")
             m.attributedTitle = NSAttributedString(string: m.title, attributes: [.font: NSFont.menuFont(ofSize: 13).withTraits(.bold)])
             menu.addItem(m)
             menu.addItem(.separator())
