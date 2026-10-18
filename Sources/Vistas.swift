@@ -28,14 +28,14 @@ func cuando(_ d: Date?) -> String {
 // MARK: Título de la barra (plantilla monocroma: macOS la pinta blanca o negra según el esquema)
 
 // color nil = plantilla (sigue al sistema); un color fijo se usa al forzar Día o Noche.
-func imagenBarra(_ items: [(Servicio, String)], color: NSColor? = nil) -> NSImage {
+func imagenBarra(_ items: [(Servicio, String)], color: NSColor? = nil, aviso: Bool = false) -> NSImage {
     let tinta = color ?? .black
     let font = NSFont.monospacedDigitSystemFont(ofSize: 12.5, weight: .semibold)
     let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: tinta]
     let ico: CGFloat = 14, gap: CGFloat = 4, sep: CGFloat = 10, h: CGFloat = 18
     let textos = items.map { NSAttributedString(string: $0.1, attributes: attrs) }
     let w = zip(items, textos).reduce(CGFloat(0)) { $0 + ico + gap + ceil($1.1.size().width) }
-        + sep * CGFloat(max(items.count - 1, 0))
+        + sep * CGFloat(max(items.count - 1, 0)) + (aviso ? 8 : 0)
     let img = NSImage(size: NSSize(width: max(w, 1), height: h), flipped: false) { _ in
         var x: CGFloat = 0
         for ((s, _), t) in zip(items, textos) {
@@ -46,6 +46,8 @@ func imagenBarra(_ items: [(Servicio, String)], color: NSColor? = nil) -> NSImag
             t.draw(at: NSPoint(x: x, y: (h - t.size().height) / 2))
             x += ceil(t.size().width) + sep
         }
+        // Punto de aviso: hay una actualización disponible.
+        if aviso { tinta.setFill(); NSBezierPath(ovalIn: NSRect(x: x - sep + 3, y: h - 7, width: 5, height: 5)).fill() }
         return true
     }
     img.isTemplate = color == nil

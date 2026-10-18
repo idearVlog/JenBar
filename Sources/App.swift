@@ -47,6 +47,8 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         actualizar()
         if CommandLine.arguments.contains("--config") { abrirConfig() }
         Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in Task { @MainActor in self.actualizar() } }
+        revisarEnSegundoPlano()
+        Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { _ in Task { @MainActor in self.revisarEnSegundoPlano() } }
     }
 
     var activos: [Servicio] { Servicio.allCases.filter(Ajustes.activo) }
@@ -72,7 +74,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (s, "–")
         }
         // Plantilla: la barra sigue siempre al sistema, como las demás apps; el modo forzado sólo cambia menú y ventanas.
-        item.button?.image = imagenBarra(items)
+        item.button?.image = imagenBarra(items, aviso: novedad != nil)
         item.button?.toolTip = "JenBar: porcentaje disponible"
     }
 
@@ -92,6 +94,12 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         actualizar()
         menu.appearance = NSApp.appearance
         menu.removeAllItems()
+        if let n = novedad {
+            let m = accion("Actualización disponible: JenBar \(n.version)", "arrow.down.circle.fill", #selector(abrirNovedad), "")
+            m.attributedTitle = NSAttributedString(string: m.title, attributes: [.font: NSFont.menuFont(ofSize: 13).withTraits(.bold)])
+            menu.addItem(m)
+            menu.addItem(.separator())
+        }
         for s in activos {
             menu.addItem(vista(TarjetaServicio(servicio: s, ultimo: ultimos[s], error: errores[s])))
             menu.addItem(.separator())
@@ -148,22 +156,52 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         ventanaConfig?.orderFrontRegardless()
     }
 
+    // MARK: Actualizaciones
+
+    var novedad: (version: String, url: URL)?
+    var actual: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0" }
+
+    func consultarVersion() async throws -> (version: String, url: URL)? {
+        let (d, r) = try await URLSession.shared.data(from: URL(string: "https://api.github.com/repos/\(repoGitHub)/releases/latest")!)
+        guard (r as? HTTPURLResponse)?.statusCode == 200,
+              let j = try JSONSerialization.jsonObject(with: d) as? [String: Any],
+              let tag = j["tag_name"] as? String,
+              let url = (j["html_url"] as? String).flatMap(URL.init(string:)) else { throw URLError(.badServerResponse) }
+        let v = tag.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+        return v.compare(actual, options: .numeric) == .orderedDescending ? (v, url) : nil
+    }
+
+    // Revisión silenciosa al abrir y cada 6 h: avisa una sola vez por versión.
+    func revisarEnSegundoPlano() {
+        Task {
+            guard let n = try? await consultarVersion() else { return }
+            novedad = n
+            pintarBarra()
+            let clave = "avisada." + n.version
+            guard !UserDefaults.standard.bool(forKey: clave) else { return }
+            UserDefaults.standard.set(true, forKey: clave)
+            let a = NSAlert()
+            a.messageText = "JenBar \(n.version) está disponible"
+            a.informativeText = "Tenés la \(actual). Podés descargarla ahora o más tarde desde el menú."
+            a.addButton(withTitle: "Descargar"); a.addButton(withTitle: "Más tarde")
+            NSApp.activate()
+            if a.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(n.url) }
+        }
+    }
+
+    @objc func abrirNovedad() { if let u = novedad?.url { NSWorkspace.shared.open(u) } }
+
     @objc func buscarVersion() {
         Task {
-            let actual = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
             let alerta = NSAlert()
             var url: URL?
             do {
-                let (d, r) = try await URLSession.shared.data(from: URL(string: "https://api.github.com/repos/\(repoGitHub)/releases/latest")!)
-                guard (r as? HTTPURLResponse)?.statusCode == 200,
-                      let j = try JSONSerialization.jsonObject(with: d) as? [String: Any],
-                      let tag = j["tag_name"] as? String else { throw URLError(.badServerResponse) }
-                let nueva = tag.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-                if nueva.compare(actual, options: .numeric) == .orderedDescending {
-                    alerta.messageText = "Hay una versión nueva: \(nueva)"
+                if let n = try await consultarVersion() {
+                    novedad = n; pintarBarra()
+                    alerta.messageText = "Hay una versión nueva: \(n.version)"
                     alerta.informativeText = "Tenés la \(actual). ¿Abrir la página de descarga?"
                     alerta.addButton(withTitle: "Descargar"); alerta.addButton(withTitle: "Más tarde")
-                    url = (j["html_url"] as? String).flatMap(URL.init(string:))
+                    url = n.url
                 } else {
                     alerta.messageText = "JenBar está al día (\(actual))"
                 }
@@ -185,5 +223,11 @@ struct Principal {
         app.delegate = c
         app.setActivationPolicy(.accessory)
         app.run()
+    }
+}
+
+extension NSFont {
+    func withTraits(_ t: NSFontDescriptor.SymbolicTraits) -> NSFont {
+        NSFont(descriptor: fontDescriptor.withSymbolicTraits(t), size: pointSize) ?? self
     }
 }
