@@ -1,5 +1,8 @@
 # Cambios
 
+## 1.1.1 — 2026-11-10
+- La barra muestra el disponible de la ventana semanal (antes, el de la ventana más gastada). Si el plan no tiene semanal, muestra el de 5 h.
+
 ## 1.1.0 — 2026-10-18
 - Aviso automático de actualizaciones: JenBar revisa GitHub al abrirse y cada 6 h. Cuando hay una versión nueva, avisa una vez con un cartel; hasta que actualices, la barra muestra una flecha de descarga y el menú arranca con «Nueva versión · Instalar y reiniciar». Un clic descarga, instala y vuelve a abrir JenBar.
 

@@ -11,9 +11,8 @@ struct Estado {
     var plan: String
     var cincoHoras: Ventana?
     var semana: Ventana?
-    var libreMinimo: Double? {
-        [cincoHoras, semana].compactMap { $0?.libre }.min()
-    }
+    // La barra muestra el disponible semanal; si el plan no tiene semanal, el de 5 h.
+    var libreBarra: Double? { (semana ?? cincoHoras)?.libre }
 }
 
 enum Servicio: String, CaseIterable, Identifiable {

@@ -70,7 +70,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func pintarBarra() {
         let items = activos.map { s -> (Servicio, String) in
-            if let l = ultimos[s]?.estado.libreMinimo { return (s, porcentaje(l).replacingOccurrences(of: " ", with: "")) }
+            if let l = ultimos[s]?.estado.libreBarra { return (s, porcentaje(l).replacingOccurrences(of: " ", with: "")) }
             return (s, "–")
         }
         // Plantilla: la barra sigue siempre al sistema, como las demás apps; el modo forzado sólo cambia menú y ventanas.
