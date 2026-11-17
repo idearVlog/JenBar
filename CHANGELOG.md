@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.1.2 — 2026-11-17
+- JenBar ya no lanza Claude Code en segundo plano para renovar la sesión: en algunas Mac provocaba pedidos de permiso a Documentos en bucle.
+- Si la sesión de Claude venció o se cerró, el menú lo dice y ofrece «Iniciar sesión en Claude…».
+- «Actualizar ahora» reintenta en el momento, sin esperar la pausa entre consultas.
+
 ## 1.1.1 — 2026-11-10
 - La barra muestra el disponible de la ventana semanal (antes, el de la ventana más gastada). Si el plan no tiene semanal, muestra el de 5 h.
 

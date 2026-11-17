@@ -27,7 +27,7 @@ enum FalloLectura: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .sinVincular: return "No vinculado"
-        case .sesionVencida: return "Sesión de Claude Code vencida: abrí Claude Code o volvé a vincular"
+        case .sesionVencida: return "Sesión vencida: usá Claude Code o tocá «Iniciar sesión en Claude…»"
         case .respuesta(429): return "Demasiadas consultas: reintento en 15 min"
         case .respuesta(let c): return "El servicio respondió \(c)"
         }
@@ -66,34 +66,12 @@ enum Lector {
                 (o["expiresAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) })
     }
 
-    // El token de Claude Code dura unas 8 h y sólo Claude Code lo renueva. Vencido, el servicio
-    // responde 429 (no 401). Para renovarlo sin tocar el llavero se le pide a Claude Code una
-    // respuesta mínima (modelo haiku, un turno), como mucho una vez cada 30 min.
-    private static var ultimoIntento = Date.distantPast
-    static let rutaClaude = ["/opt/homebrew/bin/claude", "/usr/local/bin/claude", NSHomeDirectory() + "/.local/bin/claude"]
-        .first { FileManager.default.isExecutableFile(atPath: $0) }
-
-    private static func renovarClaude() async {
-        guard let bin = rutaClaude, Date().timeIntervalSince(ultimoIntento) > 1800 else { return }
-        ultimoIntento = Date()
-        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: bin)
-            p.arguments = ["-p", "ok", "--model", "haiku", "--max-turns", "1"]
-            p.currentDirectoryURL = FileManager.default.temporaryDirectory
-            p.standardOutput = Pipe(); p.standardError = Pipe()
-            p.terminationHandler = { _ in c.resume() }
-            if (try? p.run()) == nil { c.resume() }
-        }
-    }
-
+    // El token de Claude Code dura unas 8 h y lo renueva Claude Code al usarse. JenBar no lanza
+    // procesos de Claude Code por su cuenta (en 1.1.x eso disparaba pedidos de permiso en bucle):
+    // si el token venció, avisa y ofrece volver a iniciar sesión.
     private static func claude() async throws -> Estado {
-        var (token, plan, vence) = try tokenClaude()
-        if let v = vence, v.timeIntervalSinceNow < 60 {
-            await renovarClaude()
-            (token, plan, vence) = try tokenClaude()
-            if let v = vence, v.timeIntervalSinceNow < 60 { throw FalloLectura.sesionVencida }
-        }
+        let (token, plan, vence) = try tokenClaude()
+        if let v = vence, v.timeIntervalSinceNow < 60 { throw FalloLectura.sesionVencida }
         let j = try await pedir("https://api.anthropic.com/api/oauth/usage",
                                 ["Authorization": "Bearer \(token)", "anthropic-beta": "oauth-2025-04-20"])
         func v(_ k: String) -> Ventana? {

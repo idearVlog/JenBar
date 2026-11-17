@@ -19,8 +19,8 @@ enum Vinculo {
         let cmd: String
         switch s {
         case .claude:
-            cmd = FileManager.default.fileExists(atPath: "/opt/homebrew/bin/claude") ? "claude /login"
-                : "brew install --cask claude-code && claude /login"
+            cmd = FileManager.default.fileExists(atPath: "/opt/homebrew/bin/claude") ? "claude auth login"
+                : "brew install --cask claude-code && claude auth login"
         case .chatgpt:
             cmd = FileManager.default.fileExists(atPath: "/opt/homebrew/bin/codex") ? "codex login"
                 : "brew install --cask codex && codex login"
@@ -105,6 +105,11 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(.separator())
         }
         if activos.isEmpty { menu.addItem(withTitle: "Activá un servicio en Configuración", action: nil, keyEquivalent: "") }
+        if case FalloLectura.sesionVencida? = errores[.claude] as? FalloLectura {
+            menu.addItem(accion("Iniciar sesión en Claude…", "person.crop.circle.badge.checkmark", #selector(loginClaude), ""))
+        } else if case FalloLectura.sinVincular? = errores[.claude] as? FalloLectura {
+            menu.addItem(accion("Iniciar sesión en Claude…", "person.crop.circle.badge.checkmark", #selector(loginClaude), ""))
+        }
         menu.addItem(accion("Actualizar ahora", "arrow.clockwise", #selector(actualizarAhora), "r"))
         menu.addItem(accion("Configuración…", "gearshape", #selector(abrirConfig), ","))
         menu.addItem(accion("Buscar actualizaciones…", "arrow.down.circle", #selector(buscarVersion), ""))
@@ -135,7 +140,8 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return m
     }
 
-    @objc func actualizarAhora() { actualizar() }
+    @objc func actualizarAhora() { proximo = [:]; actualizar() }
+    @objc func loginClaude() { Vinculo.abrir(.claude) }
     @objc func abrirCanal(_ m: NSMenuItem) { NSWorkspace.shared.open(URL(string: canales[m.tag].1)!) }
 
     @objc func abrirConfig() {
