@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.2.0 — 2026-11-18
+- Claude no se desconecta más: JenBar renueva la sesión de Claude Code 10 minutos antes de que venza (igual que Claude Code) y la guarda en el mismo lugar del llavero, así Claude Code también queda al día.
+- Umbrales más prudentes: una consulta cada 5 min por servicio; ante «demasiadas consultas» respeta el tiempo que indica el servicio o espera 5, 10, 20 y hasta 30 min.
+
 ## 1.1.2 — 2026-11-17
 - JenBar ya no lanza Claude Code en segundo plano para renovar la sesión: en algunas Mac provocaba pedidos de permiso a Documentos en bucle.
 - Si la sesión de Claude venció o se cerró, el menú lo dice y ofrece «Iniciar sesión en Claude…».

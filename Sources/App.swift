@@ -36,6 +36,7 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var ultimos: [Servicio: (estado: Estado, cuando: Date)] = [:]   // último dato bueno: se conserva si falla una lectura
     var errores: [Servicio: Error] = [:]
     var proximo: [Servicio: Date] = [:]                            // pausa entre lecturas (evita el 429 del servicio)
+    var esperas429: [Servicio: Double] = [:]                       // espera creciente tras cada 429
     var ventanaConfig: NSWindow?
 
     func applicationDidFinishLaunching(_ n: Notification) {
@@ -54,14 +55,20 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var activos: [Servicio] { Servicio.allCases.filter(Ajustes.activo) }
 
     func actualizar() {
+        // Umbrales: una consulta cada 5 min por servicio (abrir el menú no fuerza otra). Ante un 429 se
+        // respeta Retry-After o se espera 5 → 10 → 20 → 30 min; un acierto vuelve al ritmo normal.
         for s in activos where Date() >= proximo[s, default: .distantPast] {
-            proximo[s] = Date().addingTimeInterval(240)
+            proximo[s] = Date().addingTimeInterval(290)
             Task {
                 do {
-                    ultimos[s] = (try await Lector.leer(s), Date()); errores[s] = nil
+                    ultimos[s] = (try await Lector.leer(s), Date()); errores[s] = nil; esperas429[s] = nil
                 } catch {
                     errores[s] = error
-                    if case FalloLectura.respuesta(429) = error { proximo[s] = Date().addingTimeInterval(900) }
+                    if case FalloLectura.respuesta(429) = error {
+                        let espera = Lector.ultimoRetryAfter ?? min((esperas429[s] ?? 150) * 2, 1800)
+                        esperas429[s] = espera
+                        proximo[s] = Date().addingTimeInterval(max(espera, 300))
+                    }
                 }
                 pintarBarra()
             }
@@ -140,7 +147,8 @@ final class Controlador: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return m
     }
 
-    @objc func actualizarAhora() { proximo = [:]; actualizar() }
+    // Manual: reintenta ya, salvo que el servicio haya pedido esperar (429).
+    @objc func actualizarAhora() { proximo = proximo.filter { esperas429[$0.key] != nil }; actualizar() }
     @objc func loginClaude() { Vinculo.abrir(.claude) }
     @objc func abrirCanal(_ m: NSMenuItem) { NSWorkspace.shared.open(URL(string: canales[m.tag].1)!) }
 

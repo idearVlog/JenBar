@@ -28,7 +28,7 @@ enum FalloLectura: LocalizedError {
         switch self {
         case .sinVincular: return "No vinculado"
         case .sesionVencida: return "Sesión vencida: usá Claude Code o tocá «Iniciar sesión en Claude…»"
-        case .respuesta(429): return "Demasiadas consultas: reintento en 15 min"
+        case .respuesta(429): return "Demasiadas consultas: reintento automático en unos minutos"
         case .respuesta(let c): return "El servicio respondió \(c)"
         }
     }
@@ -48,32 +48,89 @@ enum Lector {
 
     // MARK: Claude (token OAuth de Claude Code en el llavero)
 
-    private static func tokenClaude() throws -> (token: String, plan: String, vence: Date?) {
+    static let servicioLlavero = "Claude Code-credentials"
+
+    private static func security(_ args: [String]) -> (ok: Bool, salida: Data) {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        p.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
+        p.arguments = args
         let out = Pipe()
         p.standardOutput = out
         p.standardError = Pipe()
-        try p.run()
-        p.waitUntilExit()
+        guard (try? p.run()) != nil else { return (false, Data()) }
         let data = out.fileHandleForReading.readDataToEndOfFile()
-        guard p.terminationStatus == 0,
-              let j = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let o = j["claudeAiOauth"] as? [String: Any],
-              let t = o["accessToken"] as? String else { throw FalloLectura.sinVincular }
+        p.waitUntilExit()
+        return (p.terminationStatus == 0, data)
+    }
+
+    private static func credencialesClaude() throws -> [String: Any] {
+        let r = security(["find-generic-password", "-s", servicioLlavero, "-w"])
+        guard r.ok, let j = try JSONSerialization.jsonObject(with: r.salida) as? [String: Any],
+              j["claudeAiOauth"] is [String: Any] else { throw FalloLectura.sinVincular }
+        return j
+    }
+
+    private static func tokenClaude() throws -> (token: String, plan: String, vence: Date?) {
+        let o = try credencialesClaude()["claudeAiOauth"] as! [String: Any]
+        guard let t = o["accessToken"] as? String else { throw FalloLectura.sinVincular }
         return (t, (o["subscriptionType"] as? String) ?? "",
                 (o["expiresAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) })
     }
 
-    // El token de Claude Code dura unas 8 h y lo renueva Claude Code al usarse. JenBar no lanza
-    // procesos de Claude Code por su cuenta (en 1.1.x eso disparaba pedidos de permiso en bucle):
-    // si el token venció, avisa y ofrece volver a iniciar sesión.
+    // El token de Claude Code dura ~8 h y Claude Code sólo lo renueva cuando se usa. JenBar lo renueva
+    // igual que Claude Code (refresh token OAuth) y guarda el resultado en el mismo ítem del llavero, así
+    // ambos quedan al día. Umbrales: renueva 10 min antes de vencer y como mucho una vez cada 10 min.
+    private static var ultimaRenovacion = Date.distantPast
+    private static let clienteOAuth = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+
+    private static func renovarClaude() async throws {
+        guard Date().timeIntervalSince(ultimaRenovacion) > 600 else { throw FalloLectura.sesionVencida }
+        ultimaRenovacion = Date()
+        var j = try credencialesClaude()
+        var o = j["claudeAiOauth"] as! [String: Any]
+        guard let refresh = o["refreshToken"] as? String else { throw FalloLectura.sesionVencida }
+        var r = URLRequest(url: URL(string: "https://platform.claude.com/v1/oauth/token")!, timeoutInterval: 20)
+        r.httpMethod = "POST"
+        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        r.setValue("JenBar", forHTTPHeaderField: "User-Agent")
+        r.httpBody = try JSONSerialization.data(withJSONObject: [
+            "grant_type": "refresh_token", "refresh_token": refresh, "client_id": clienteOAuth])
+        let (data, resp) = try await URLSession.shared.data(for: r)
+        guard (resp as? HTTPURLResponse)?.statusCode == 200,
+              let n = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let acceso = n["access_token"] as? String else { throw FalloLectura.sesionVencida }
+        // Se relee justo antes de escribir por si Claude Code renovó mientras tanto.
+        j = try credencialesClaude()
+        o = j["claudeAiOauth"] as! [String: Any]
+        let ahora = Date().timeIntervalSince1970
+        o["accessToken"] = acceso
+        if let nuevo = n["refresh_token"] as? String { o["refreshToken"] = nuevo }
+        o["expiresAt"] = Int((ahora + ((n["expires_in"] as? Double) ?? 28_800)) * 1000)
+        if let e = n["refresh_token_expires_in"] as? Double { o["refreshTokenExpiresAt"] = Int((ahora + e) * 1000) }
+        j["claudeAiOauth"] = o
+        let json = String(data: try JSONSerialization.data(withJSONObject: j), encoding: .utf8)!
+        guard security(["add-generic-password", "-U", "-s", servicioLlavero, "-a", NSUserName(), "-w", json]).ok
+        else { throw FalloLectura.sesionVencida }
+    }
+
     private static func claude() async throws -> Estado {
-        let (token, plan, vence) = try tokenClaude()
-        if let v = vence, v.timeIntervalSinceNow < 60 { throw FalloLectura.sesionVencida }
-        let j = try await pedir("https://api.anthropic.com/api/oauth/usage",
+        var (token, plan, vence) = try tokenClaude()
+        if let v = vence, v.timeIntervalSinceNow < 600 {
+            try? await renovarClaude()
+            (token, plan, vence) = try tokenClaude()
+            if let v = vence, v.timeIntervalSinceNow < 60 { throw FalloLectura.sesionVencida }
+        }
+        let j: [String: Any]
+        do {
+            j = try await pedir("https://api.anthropic.com/api/oauth/usage",
                                 ["Authorization": "Bearer \(token)", "anthropic-beta": "oauth-2025-04-20"])
+        } catch FalloLectura.sesionVencida {
+            // Token revocado antes de tiempo: una sola renovación y un solo reintento.
+            try await renovarClaude()
+            (token, plan, _) = try tokenClaude()
+            j = try await pedir("https://api.anthropic.com/api/oauth/usage",
+                                ["Authorization": "Bearer \(token)", "anthropic-beta": "oauth-2025-04-20"])
+        }
         func v(_ k: String) -> Ventana? {
             guard let d = j[k] as? [String: Any], let u = d["utilization"] as? Double else { return nil }
             return Ventana(usado: u, reinicio: (d["resets_at"] as? String).flatMap(fechaISO))
@@ -84,6 +141,7 @@ enum Lector {
     // MARK: ChatGPT / Codex (~/.codex/auth.json, sólo lectura)
 
     static let rutaCodex = NSHomeDirectory() + "/.codex/auth.json"
+    static var ultimoRetryAfter: Double?
 
     private static func chatgpt() async throws -> Estado {
         guard let data = FileManager.default.contents(atPath: rutaCodex),
@@ -107,12 +165,16 @@ enum Lector {
     // MARK: Utilidades
 
     private static func pedir(_ url: String, _ headers: [String: String]) async throws -> [String: Any] {
+        ultimoRetryAfter = nil
         var r = URLRequest(url: URL(string: url)!, timeoutInterval: 15)
         r.setValue("JenBar", forHTTPHeaderField: "User-Agent")
         headers.forEach { r.setValue($1, forHTTPHeaderField: $0) }
         let (data, resp) = try await URLSession.shared.data(for: r)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
         if code == 401 || code == 403 { throw FalloLectura.sesionVencida }
+        if code == 429 {
+            ultimoRetryAfter = ((resp as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After")).flatMap(Double.init)
+        }
         guard code == 200 else { throw FalloLectura.respuesta(code) }
         return (try JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
     }
