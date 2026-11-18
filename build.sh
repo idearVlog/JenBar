@@ -37,7 +37,7 @@ cat > $APP/Contents/Info.plist <<EOF
 </dict></plist>
 EOF
 xattr -cr $APP
-codesign --force --sign - $APP
+codesign --force --sign - $APP || { xattr -cr $APP; codesign --force --sign - $APP; }
 # Instalador DMG: la app y un acceso a Aplicaciones para arrastrar.
 STAGE=build/dmg && mkdir -p $STAGE && cp -R $APP $STAGE/ && ln -s /Applications $STAGE/Aplicaciones
 cp $APP/Contents/Resources/JenBar.icns $STAGE/.VolumeIcon.icns
