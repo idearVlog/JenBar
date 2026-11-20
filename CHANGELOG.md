@@ -1,5 +1,8 @@
 # Cambios
 
+## 1.3.0 — 2026-11-20
+- Claude: barra propia para los modelos con límite semanal separado (por ejemplo «Semanal · Fable»). Aparece sola cuando tu plan la informa.
+
 ## 1.2.0 — 2026-11-18
 - Claude no se desconecta más: JenBar renueva la sesión de Claude Code 10 minutos antes de que venza (igual que Claude Code) y la guarda en el mismo lugar del llavero, así Claude Code también queda al día.
 - Umbrales más prudentes: una consulta cada 5 min por servicio; ante «demasiadas consultas» respeta el tiempo que indica el servicio o espera 5, 10, 20 y hasta 30 min.

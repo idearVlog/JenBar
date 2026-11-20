@@ -11,6 +11,7 @@ struct Estado {
     var plan: String
     var cincoHoras: Ventana?
     var semana: Ventana?
+    var porModelo: [(nombre: String, ventana: Ventana)] = []   // límites semanales propios de un modelo (p. ej. Fable)
     // La barra muestra el disponible semanal; si el plan no tiene semanal, el de 5 h.
     var libreBarra: Double? { (semana ?? cincoHoras)?.libre }
 }
@@ -135,7 +136,14 @@ enum Lector {
             guard let d = j[k] as? [String: Any], let u = d["utilization"] as? Double else { return nil }
             return Ventana(usado: u, reinicio: (d["resets_at"] as? String).flatMap(fechaISO))
         }
-        return Estado(plan: plan, cincoHoras: v("five_hour"), semana: v("seven_day"))
+        var e = Estado(plan: plan, cincoHoras: v("five_hour"), semana: v("seven_day"))
+        for l in (j["limits"] as? [[String: Any]]) ?? [] where (l["kind"] as? String) == "weekly_scoped" {
+            guard let pct = l["percent"] as? Double,
+                  let modelo = ((l["scope"] as? [String: Any])?["model"] as? [String: Any])?["display_name"] as? String
+            else { continue }
+            e.porModelo.append((modelo, Ventana(usado: pct, reinicio: (l["resets_at"] as? String).flatMap(fechaISO))))
+        }
+        return e
     }
 
     // MARK: ChatGPT / Codex (~/.codex/auth.json, sólo lectura)

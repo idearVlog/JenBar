@@ -113,6 +113,7 @@ struct TarjetaServicio: View {
             if let u = ultimo {
                 if let v = u.estado.cincoHoras { FilaVentana(titulo: "Ventana de 5 horas", v: v) }
                 if let v = u.estado.semana { FilaVentana(titulo: "Semanal", v: v) }
+                ForEach(u.estado.porModelo, id: \.nombre) { m in FilaVentana(titulo: "Semanal · \(m.nombre)", v: m.ventana) }
                 if error != nil {
                     Text("Dato de hace \(max(1, Int(-u.cuando.timeIntervalSinceNow / 60))) min; el servicio no respondió ahora.")
                         .font(.system(size: 10)).foregroundStyle(.primary.opacity(0.6))
